@@ -1,2 +1,3 @@
-# go-advent-2023
-Advent of code 2023 in GO
+Test input run: `go run main.go -day=1`
+
+Real input run: `go run main.go -day=1 -real=true`

@@ -10,37 +10,23 @@ func Solve(input string) {
 
 	println("Part1: ", computeSum(rows))
 
+	//string digits for part 2 can overlap, so I added first and last characters of the "digit" around the replacements, because... i can
+	//for example: "oneighthree" becomes o183e in the end
 	mapping := map[string]string{
-		"one":   "1e",
-		"two":   "2o",
-		"three": "3e",
-		"four":  "4r",
-		"five":  "5e",
-		"six":   "6x",
-		"seven": "7n",
-		"eight": "8t",
-		"nine":  "9e",
+		"one":   "o1e",
+		"two":   "t2o",
+		"three": "t3e",
+		"four":  "f4r",
+		"five":  "f5e",
+		"six":   "s6x",
+		"seven": "s7n",
+		"eight": "e8t",
+		"nine":  "n9e",
 	}
 
 	for i, _ := range rows {
-
-		lowestIndex := 0
-
-		for lowestIndex != -1 {
-			lowestIndexReplacement := "one"
-			lowestIndex = -1
-
-			for k, _ := range mapping {
-				index := strings.Index(rows[i], k)
-				if index > -1 && (index < lowestIndex || lowestIndex == -1) {
-					lowestIndexReplacement = k
-					lowestIndex = index
-				}
-			}
-			if lowestIndex > -1 {
-				rows[i] = strings.Replace(rows[i], lowestIndexReplacement, mapping[lowestIndexReplacement], -1)
-			}
-
+		for k, v := range mapping {
+			rows[i] = strings.Replace(rows[i], k, v, -1)
 		}
 	}
 
@@ -54,6 +40,7 @@ func computeSum(rows []string) int32 {
 		firstDigit := int32(-1)
 		lastDigit := int32(-1)
 		for _, c := range row {
+			//rune for "0" is 48, rune for "9" is 57, so by subtracting 48 we get digit 0-9
 			if c >= 48 && c <= 57 {
 				digit := c - 48
 				if firstDigit == -1 {

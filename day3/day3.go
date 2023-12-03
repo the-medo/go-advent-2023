@@ -5,25 +5,26 @@ import (
 	"github.com/the-medo/go-advent-2023/utils"
 )
 
-const RUNE_DOT = rune('.')
-const RUNE_STAR = rune('*')
-const RUNE_DIGIT_START = rune('0')
-const RUNE_DIGIT_END = rune('9')
+const RuneDot = rune('.')
+const RuneStar = rune('*')
+const RuneDigitStart = rune('0')
+const RuneDigitEnd = rune('9')
 
 type SchemaRow = []rune
 type Schema = []SchemaRow
+
 type PartNumber struct {
-	id              int
 	number          int
 	adjacentSymbols []rune
 }
+
 type Gear struct {
-	adjacentNumberIds []int
+	adjacentNumbers []*PartNumber
 }
+
 type GearMap map[string]*Gear
 
 func Solve(input string) {
-
 	rows := utils.SplitRows(input)
 
 	schema := make(Schema, len(rows))
@@ -36,113 +37,113 @@ func Solve(input string) {
 	}
 
 	// ========== part 1
-	numbers := []PartNumber{}
-	gearMap := GearMap{}
-	numId := 0
+	var numbers []PartNumber
+	gearMap := &GearMap{}
 
 	for y, _ := range schema {
 		isNumber := false
-		numId++
-		num := PartNumber{
-			id:              numId,
+		num := &PartNumber{
 			adjacentSymbols: make([]rune, 0),
 		}
 		for x, c := range schema[y] {
-			if c >= RUNE_DIGIT_START && c <= RUNE_DIGIT_END {
-				if isNumber { //it is not first digit of a number
+			if c >= RuneDigitStart && c <= RuneDigitEnd {
+				if isNumber { //it is not first digit of a number, we adjust the existing number
 					num.number = num.number*10 + runeNumber(c)
-				} else { //it is first digit of a number
+				} else { //it is first digit of a number, we check for symbols on x-1 and x
 					isNumber = true
 					num.number = runeNumber(c)
 
-					checkSymbol(schema, y-1, x-1, &num, numId, &gearMap)
-					checkSymbol(schema, y, x-1, &num, numId, &gearMap)
-					checkSymbol(schema, y+1, x-1, &num, numId, &gearMap)
+					// xx.
+					// xN.
+					// xx.
+					checkSymbol(&schema, y-1, x-1, num, gearMap)
+					checkSymbol(&schema, y, x-1, num, gearMap)
+					checkSymbol(&schema, y+1, x-1, num, gearMap)
 
-					checkSymbol(schema, y-1, x, &num, numId, &gearMap)
-					checkSymbol(schema, y+1, x, &num, numId, &gearMap)
+					checkSymbol(&schema, y-1, x, num, gearMap)
+					checkSymbol(&schema, y+1, x, num, gearMap)
 
 				}
 
-				checkSymbol(schema, y-1, x+1, &num, numId, &gearMap)
-				checkSymbol(schema, y, x+1, &num, numId, &gearMap)
-				checkSymbol(schema, y+1, x+1, &num, numId, &gearMap)
+				//we always check for symbols on x+1
+				// ..x
+				// .Nx
+				// ..x
+				checkSymbol(&schema, y-1, x+1, num, gearMap)
+				checkSymbol(&schema, y, x+1, num, gearMap)
+				checkSymbol(&schema, y+1, x+1, num, gearMap)
 			} else if isNumber {
+				//if rune is not a digit but we had a number before, we finish it and create new
 				isNumber = false
-				numbers = append(numbers, num)
-				numId++
-				num = PartNumber{
-					id:              numId,
+				numbers = append(numbers, *num)
+				num = &PartNumber{
 					adjacentSymbols: make([]rune, 0),
 				}
 			}
 		}
+
+		//add number at the end of the row, if we still have it
 		if isNumber {
-			numbers = append(numbers, num)
-			numId++
-			num = PartNumber{
-				id:              numId,
+			numbers = append(numbers, *num)
+			num = &PartNumber{
 				adjacentSymbols: make([]rune, 0),
 			}
 		}
 	}
 
+	// sum all numbers that have adjacent symbols
 	part1 := 0
-
 	for _, num := range numbers {
 		if len(num.adjacentSymbols) > 0 {
 			part1 += num.number
 		}
 	}
-
-	fmt.Println(numbers)
 	fmt.Println("Part 1:", part1)
 
+	//sum all gears (star symbols) that have exactly 2 adjacent numbers
 	part2 := 0
-	for k, g := range gearMap {
-		if len(g.adjacentNumberIds) == 2 {
-			fmt.Print("Gear:", k, " => ")
+	for _, g := range *gearMap {
+		if len(g.adjacentNumbers) == 2 {
 			gearRatio := 1
-			for _, gearNumId := range g.adjacentNumberIds {
-				for _, num := range numbers {
-					if num.id == gearNumId {
-						gearRatio *= num.number
-					}
-				}
+			for _, gPartNum := range g.adjacentNumbers {
+				gearRatio *= gPartNum.number
 			}
-			fmt.Print("Gear ratio = ", gearRatio)
 			part2 += gearRatio
 		}
-		fmt.Println()
 	}
 
 	fmt.Println("Part 2:", part2)
 }
 
 func runeNumber(r rune) int {
-	return int(r - RUNE_DIGIT_START)
+	return int(r - RuneDigitStart)
 }
 
-func checkSymbol(schema Schema, y int, x int, partNum *PartNumber, numId int, gearMap *GearMap) {
-	if x < 0 || y < 0 || y >= len(schema) || x >= len(schema[0]) {
+/*
+*
+  - if the character is symbol, link it with the number
+  - if the character is a star and exists
+*/
+func checkSymbol(schema *Schema, y int, x int, partNum *PartNumber, gearMap *GearMap) {
+	if x < 0 || y < 0 || y >= len(*schema) || x >= len((*schema)[0]) {
 		return
 	}
 
-	c := schema[y][x]
+	c := (*schema)[y][x]
 
 	if isSymbol(c) {
-		partNum.adjacentSymbols = append(partNum.adjacentSymbols, schema[y][x])
+		partNum.adjacentSymbols = append(partNum.adjacentSymbols, (*schema)[y][x])
 	}
 
-	if c == RUNE_STAR {
+	if c == RuneStar {
 		key := fmt.Sprintf("%d-%d", x, y)
 		gear, exists := (*gearMap)[key]
 
 		if exists {
-			gear.adjacentNumberIds = append(gear.adjacentNumberIds, numId)
+			gear.adjacentNumbers = append(gear.adjacentNumbers, partNum)
 		} else {
 			gear = &Gear{
-				adjacentNumberIds: []int{numId},
+				adjacentNumbers: []*PartNumber{partNum},
 			}
 			(*gearMap)[key] = gear
 		}
@@ -150,5 +151,5 @@ func checkSymbol(schema Schema, y int, x int, partNum *PartNumber, numId int, ge
 }
 
 func isSymbol(r rune) bool {
-	return r != RUNE_DOT && (r < RUNE_DIGIT_START || r > RUNE_DIGIT_END)
+	return r != RuneDot && (r < RuneDigitStart || r > RuneDigitEnd)
 }

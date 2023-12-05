@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/the-medo/go-advent-2023/day16"
+	"time"
 
 	"github.com/the-medo/go-advent-2023/utils"
 	"path"
@@ -46,6 +47,7 @@ func main() {
 
 	fmt.Printf("======= Running Day %d =========", *day)
 	fmt.Println()
+	start := time.Now()
 
 	switch *day {
 	case 1:
@@ -99,6 +101,8 @@ func main() {
 	case 25:
 		day25.Solve(inputData)
 	}
+	duration := time.Since(start)
+	fmt.Println("Execution Time: ", duration)
 }
 
 func getInputType(isReal bool) string {

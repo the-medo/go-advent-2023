@@ -8,93 +8,69 @@ import (
 	"strings"
 )
 
-type MapRange struct {
+type ReplaceRule struct {
 	sourceStart int
 	targetStart int
 	rangeSize   int
 }
 
-type SeedMap = []MapRange
+type SeedReplacementRules = []ReplaceRule
 
-type FixedSeedInfo struct {
+type SeedWithRange struct {
 	start  int
 	length int
 }
 
 func Solve(input string) {
+
+	// ======================= PARSE START ===================
 	sections := utils.SplitByEmptyRow(input)
+	seeds, _ := parseSeeds(strings.Split(sections[0], ": ")[1])
 
-	seedNumbersSplit := strings.Split(sections[0], ": ")
-	seedsSplit := strings.Split(seedNumbersSplit[1], " ")
-
-	seeds := make([]int, len(seedsSplit))
-	for i, s := range seedsSplit {
-		seeds[i], _ = strconv.Atoi(s)
-	}
-
-	seedMaps := make([]SeedMap, len(sections)-1)
+	seedMaps := make([]SeedReplacementRules, len(sections)-1)
 	for i, section := range sections[1:] {
-		sectionRows := utils.SplitRows(section)
-		seedMap := make(SeedMap, len(sectionRows)-1)
-		for j, sectionRow := range sectionRows[1:] {
-			rangeSplit := strings.Split(sectionRow, " ")
-			oneStart, _ := strconv.Atoi(rangeSplit[1])
-			twoStart, _ := strconv.Atoi(rangeSplit[0])
-			rangeSize, _ := strconv.Atoi(rangeSplit[2])
-			seedMap[j] = MapRange{
-				sourceStart: oneStart,
-				targetStart: twoStart,
-				rangeSize:   rangeSize,
-			}
-		}
-		seedMaps[i] = seedMap
+		seedMaps[i], _ = parseSeedMap(section)
 	}
+	// ======================= PARSE END ===================
 
-	fmt.Println("Part 1:", findLowestLocation(seeds, seedMaps))
-
-	//part 2
-	//fix seeds
-	fixedSeedInfos := make([]FixedSeedInfo, len(seeds)/2)
-	for i, seed := range seeds {
-		if i%2 == 0 {
-			fixedSeedInfos[i/2] = FixedSeedInfo{
-				start: seed,
-			}
-		} else {
-			fixedSeedInfos[i/2].length = seed
-		}
-	}
-
-	fmt.Println("Fixed seeds:", fixedSeedInfos)
-	fmt.Println("First seed map:", seedMaps[0])
-
-	test := make([][]FixedSeedInfo, len(seedMaps)+1)
-	test[0] = fixedSeedInfos
-	lowestValue := 0
-	for i, sm := range seedMaps {
-		test[i+1], lowestValue = splitSeedInfos(test[i], sm)
-		fmt.Println("Round", i, " [", lowestValue, "] : ", test[i+1])
-	}
-
-	//seedsFinal := make([]int, len(test[len(test)-1]))
-	//for i, x := range test[len(test)-1] {
-	//	seedsFinal[i] = x.start
-	//}
-	//fmt.Println("Final seeds:", seedsFinal)
-	//fmt.Println("Lowest value:", lowestValue)
-	//fmt.Println("Part 2:", findLowestLocation(seedsFinal, seedMaps))
+	fmt.Println("Part 1: ", findMinimum(computeRanges(createSeedsWithRange(seeds, 1), seedMaps, 0)))
+	fmt.Println("Part 2: ", findMinimum(computeRanges(createSeedsWithRange(seeds, 2), seedMaps, 0)))
 }
 
-func splitSeedInfos(fixedSeedInfos []FixedSeedInfo, seedMap SeedMap) ([]FixedSeedInfo, int) {
-	lowestValue := math.MaxInt
+// for the first part, we take all the seeds and give them range with length 1
+// for the second part, every second number is set as the range
+func createSeedsWithRange(seeds []int, part int) []SeedWithRange {
+	seedsWithRange := make([]SeedWithRange, len(seeds)/part)
+	if part != 1 && part != 2 {
+		panic("Wrong part!")
+	}
 
-	newSeedInfo := make([]FixedSeedInfo, 0)
+	for i, seed := range seeds {
+		if part == 2 && i%2 == 1 {
+			seedsWithRange[i/2].length = seed
+		} else {
+			seedsWithRange[i/part] = SeedWithRange{
+				start:  seed,
+				length: 1,
+			}
+		}
+	}
 
-	for _, fsi := range fixedSeedInfos {
-		leftover := fsi.length
-		tmpValue := fsi.start
+	return seedsWithRange
+}
+
+func computeRanges(seedsWithRange []SeedWithRange, seedMaps []SeedReplacementRules, index int) []SeedWithRange {
+	if index >= len(seedMaps) {
+		return seedsWithRange
+	}
+
+	seedMap := seedMaps[index]
+	newSeedRanges := make([]SeedWithRange, 0)
+
+	for _, swr := range seedsWithRange {
+		leftover := swr.length
+		tmpValue := swr.start
 		for leftover > 0 {
-			//newSeedInfo = append(newSeedInfo, tmpValue)
 			found := false
 			nearestRangeStart := math.MaxInt
 			for _, x := range seedMap {
@@ -107,68 +83,85 @@ func splitSeedInfos(fixedSeedInfos []FixedSeedInfo, seedMap SeedMap) ([]FixedSee
 					diffTillEnd := x.rangeSize - diff
 					newLength := leftover
 					leftover -= diffTillEnd
-					if leftover < 0 {
-						//diff += leftover
-					} else {
+					if leftover > 1 {
 						newLength = diffTillEnd
 						tmpValue = x.sourceStart + x.rangeSize
 					}
 					newValue := x.targetStart + diff
-					newSeedInfo = append(newSeedInfo, FixedSeedInfo{
+					newSeedRanges = append(newSeedRanges, SeedWithRange{
 						start:  newValue,
 						length: newLength,
 					})
-					if newValue < lowestValue {
-						lowestValue = newValue
-					}
-					//println("DIFF: ", diff, " LEFTOVER: ", leftover, " TMP: ", tmpValue)
 					break
 				}
 			}
 			if !found {
-				//diff := nearestRangeStart - tmpValue
-				diff := nearestRangeStart - tmpValue
-				if nearestRangeStart == math.MaxInt {
-					diff = leftover
-				}
-				newSeedInfo = append(newSeedInfo, FixedSeedInfo{
+				newSeedRanges = append(newSeedRanges, SeedWithRange{
 					start:  tmpValue,
-					length: diff,
+					length: leftover,
 				})
-				if tmpValue < lowestValue {
-					lowestValue = tmpValue
-				}
-				leftover -= diff
-				tmpValue += diff
+				leftover = 0
+				tmpValue += leftover
 			}
 		}
 	}
-	//fmt.Println("Seeds to check:", newSeedInfo)
-	return newSeedInfo, lowestValue
+	return computeRanges(newSeedRanges, seedMaps, index+1)
 }
 
-func findLowestLocation(seeds []int, seedMaps []SeedMap) int {
-	lowestLocation := math.MaxInt
-
-	for _, seed := range seeds {
-		fmt.Print("Seed: ", seed, " ")
-		tmpValue := seed
-		for _, seedMap := range seedMaps {
-			for _, x := range seedMap {
-				if x.sourceStart <= tmpValue && x.sourceStart+x.rangeSize > tmpValue {
-
-					fmt.Print(" (", tmpValue, " - ", x.sourceStart, " ", x.targetStart, " ", x.rangeSize, ") ")
-					tmpValue = x.targetStart + (tmpValue - x.sourceStart)
-					break
-				}
-			}
-			fmt.Print(" => ", tmpValue, " ")
+func findMinimum(seedsWithRange []SeedWithRange) int {
+	lowest := math.MaxInt
+	for _, seedWithRange := range seedsWithRange {
+		if seedWithRange.start < lowest {
+			lowest = seedWithRange.start
 		}
-		if tmpValue < lowestLocation {
-			lowestLocation = tmpValue
-		}
-		fmt.Println()
 	}
+	return lowest
+}
 
-	return lowestLocation
+func parseSeeds(seedstring string) ([]int, error) {
+	seedsSplit := strings.Split(seedstring, " ")
+	seeds := []int{}
+
+	for _, s := range seedsSplit {
+		seed, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, err
+		}
+		seeds = append(seeds, seed)
+	}
+	return seeds, nil
+}
+
+func parseMapRange(sectionRow string) (ReplaceRule, error) {
+	rangeSplit := strings.Split(sectionRow, " ")
+	oneStart, err := strconv.Atoi(rangeSplit[1])
+	if err != nil {
+		return ReplaceRule{}, err
+	}
+	twoStart, err := strconv.Atoi(rangeSplit[0])
+	if err != nil {
+		return ReplaceRule{}, err
+	}
+	rangeSize, err := strconv.Atoi(rangeSplit[2])
+	if err != nil {
+		return ReplaceRule{}, err
+	}
+	return ReplaceRule{
+		sourceStart: oneStart,
+		targetStart: twoStart,
+		rangeSize:   rangeSize,
+	}, nil
+}
+
+func parseSeedMap(section string) (SeedReplacementRules, error) {
+	sectionRows := utils.SplitRows(section)
+	seedMap := make(SeedReplacementRules, len(sectionRows)-1)
+	for j, sectionRow := range sectionRows[1:] {
+		seedRange, err := parseMapRange(sectionRow)
+		if err != nil {
+			return nil, err
+		}
+		seedMap[j] = seedRange
+	}
+	return seedMap, nil
 }

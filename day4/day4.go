@@ -20,7 +20,7 @@ func Solve(input string) {
 	cardsSplit := utils.SplitRows(input)
 	cards := make([]*Card, len(cardsSplit))
 
-	for i, _ := range cardsSplit {
+	for i := range cardsSplit {
 		cards[i] = &Card{
 			count: 1,
 		}

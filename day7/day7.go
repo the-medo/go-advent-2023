@@ -15,9 +15,10 @@ type Hand struct {
 }
 
 type HandWithBid struct {
-	hand     *Hand
-	bid      int
-	strength int
+	handPart1 *Hand
+	handPart2 *Hand
+	bid       int
+	strength  int
 }
 
 func Solve(input string) {
@@ -28,24 +29,38 @@ func Solve(input string) {
 		bid, _ := strconv.Atoi(hSplit[1])
 
 		hands[i] = HandWithBid{
-			hand: getHandStruct(hSplit[0]),
-			bid:  bid,
+			handPart1: getHandStruct(hSplit[0], 1),
+			handPart2: getHandStruct(hSplit[0], 2),
+			bid:       bid,
 		}
 	}
 
+	// ============ part 1
 	sort.Slice(hands, func(i, j int) bool {
-		return compareHandStrength(*hands[i].hand, *hands[j].hand) > 0
+		return compareHandStrength(*hands[i].handPart1, *hands[j].handPart1) > 0
 	})
 
 	part1 := 0
 	for i, j := range hands {
 		part1 += j.bid * (len(hands) - i)
-		fmt.Println(j, j.hand)
+		fmt.Println(j, j.handPart1)
 	}
 	fmt.Println("Part 1: ", part1)
+
+	// ============ part 2
+	sort.Slice(hands, func(i, j int) bool {
+		return compareHandStrength(*hands[i].handPart2, *hands[j].handPart2) > 0
+	})
+
+	part2 := 0
+	for i, j := range hands {
+		part2 += j.bid * (len(hands) - i)
+		fmt.Println(j, j.handPart2)
+	}
+	fmt.Println("Part 2: ", part2)
 }
 
-func getHandStruct(handString string) *Hand {
+func getHandStruct(handString string, part int) *Hand {
 	handStrengths := map[string]int{
 		"FiveOfAKind":  7,
 		"FourOfAKind":  6,
@@ -58,14 +73,30 @@ func getHandStruct(handString string) *Hand {
 
 	cards := make([]int, 5)
 	availableCards := make(map[rune]int)
+	highestAvailableCount := 0
 
 	for i, x := range handString {
-		cards[i] = getCardStrength(x)
+		cards[i] = getCardStrength(x, part)
 		_, exists := availableCards[x]
 		if exists {
 			availableCards[x]++
 		} else {
 			availableCards[x] = 1
+		}
+		if availableCards[x] > highestAvailableCount && cards[i] > 0 && x != 'J' {
+			highestAvailableCount = availableCards[x]
+		}
+	}
+
+	if part == 2 {
+		jokerCount := availableCards['J']
+		if jokerCount > 0 && jokerCount != 5 {
+			delete(availableCards, 'J')
+			for i, j := range availableCards {
+				if j == highestAvailableCount {
+					availableCards[i] += jokerCount
+				}
+			}
 		}
 	}
 
@@ -91,7 +122,7 @@ func getHandStruct(handString string) *Hand {
 		result = "OnePair"
 	}
 
-	fmt.Println("Hand string: ", handString, result, availableCards)
+	fmt.Println("Hand string: ", handString, result, availableCards, len(availableCards))
 
 	return &Hand{
 		hand:          handString,
@@ -113,11 +144,7 @@ func compareHandStrength(hand1 Hand, hand2 Hand) int {
 	return hand1.handStrength - hand2.handStrength
 }
 
-func compareCardStrength(card1 rune, card2 rune) int {
-	return getCardStrength(card1) - getCardStrength(card2)
-}
-
-func getCardStrength(card rune) int {
+func getCardStrength(card rune, part int) int {
 
 	cardStrengths := map[rune]int{
 		'A': 14,
@@ -133,6 +160,10 @@ func getCardStrength(card rune) int {
 		'4': 4,
 		'3': 3,
 		'2': 2,
+	}
+
+	if part == 2 {
+		cardStrengths['J'] = 1
 	}
 
 	return cardStrengths[card]

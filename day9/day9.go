@@ -41,21 +41,37 @@ func Solve(input string) {
 
 	part1 := 0
 	for _, historyStep := range historySteps {
-		newNum := findNum(historyStep)
+		newNum := findNum(historyStep, false)
 		part1 += newNum
 		fmt.Println("hs:", newNum)
 	}
 	fmt.Println("Part1: ", part1)
 
+	part2 := 0
+	for _, historyStep := range historySteps {
+		newNum := findNum(historyStep, true)
+		part2 += newNum
+		fmt.Println("hs:", newNum)
+	}
+	fmt.Println("Part2: ", part2)
+
 }
 
-func findNum(input HistorySteps) int {
+func findNum(input HistorySteps, isPrev bool) int {
 	length := len(input.steps)
 	lastNumber := 0
-	for i := length - 1; i >= 0; i-- {
-		stepI := input.steps[i]
-		lastNumber = stepI[len(stepI)-1] + lastNumber
-		input.steps[i] = append(stepI, lastNumber)
+	if isPrev == false {
+		for i := length - 1; i >= 0; i-- {
+			stepI := input.steps[i]
+			lastNumber = stepI[len(stepI)-1] + lastNumber
+			input.steps[i] = append(stepI, lastNumber)
+		}
+	} else {
+		for i := length - 1; i >= 0; i-- {
+			stepI := input.steps[i]
+			lastNumber = stepI[0] - lastNumber
+			input.steps[i] = append([]int{lastNumber}, input.steps[i]...)
+		}
 	}
 
 	return lastNumber

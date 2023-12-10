@@ -10,8 +10,7 @@ import (
 type HistoryRow = []int
 
 type HistorySteps struct {
-	steps     []HistoryRow
-	newNumber []int
+	steps []HistoryRow
 }
 
 func Solve(input string) {
@@ -26,12 +25,11 @@ func Solve(input string) {
 		}
 
 		historySteps[i].steps = []HistoryRow{historyRow}
-		allZeros := false
-		step := 0
+		step, allZeros := 0, false
 		for !allZeros {
-			diffs, x := getDiffs(historySteps[i].steps[step])
+			diffs, zeros := getDiffs(historySteps[i].steps[step])
 			historySteps[i].steps = append(historySteps[i].steps, diffs)
-			step, allZeros = step+1, x
+			step, allZeros = step+1, zeros
 		}
 	}
 
@@ -39,36 +37,24 @@ func Solve(input string) {
 		fmt.Println("hs:", historyStep)
 	}
 
-	part1 := 0
+	part1, part2 := 0, 0
 	for _, historyStep := range historySteps {
-		newNum := findNum(historyStep, false)
-		part1 += newNum
-		fmt.Println("hs:", newNum)
+		part1 += findNum(historyStep, false)
+		part2 += findNum(historyStep, true)
 	}
 	fmt.Println("Part1: ", part1)
-
-	part2 := 0
-	for _, historyStep := range historySteps {
-		newNum := findNum(historyStep, true)
-		part2 += newNum
-		fmt.Println("hs:", newNum)
-	}
 	fmt.Println("Part2: ", part2)
-
 }
 
 func findNum(input HistorySteps, isPrev bool) int {
 	length := len(input.steps)
 	lastNumber := 0
-	if isPrev == false {
-		for i := length - 1; i >= 0; i-- {
-			stepI := input.steps[i]
+	for i := length - 1; i >= 0; i-- {
+		stepI := input.steps[i]
+		if isPrev == false {
 			lastNumber = stepI[len(stepI)-1] + lastNumber
 			input.steps[i] = append(stepI, lastNumber)
-		}
-	} else {
-		for i := length - 1; i >= 0; i-- {
-			stepI := input.steps[i]
+		} else {
 			lastNumber = stepI[0] - lastNumber
 			input.steps[i] = append([]int{lastNumber}, input.steps[i]...)
 		}

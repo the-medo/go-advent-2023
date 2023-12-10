@@ -13,8 +13,10 @@ type Neighbors = map[rune][]Dirs
 type TileMap = map[string]*Point
 
 type Point struct {
-	x, y  int
-	value rune
+	x, y        int
+	value       rune
+	inside      bool
+	polygonEdge bool
 }
 
 var NeighborMap = Neighbors{
@@ -33,6 +35,9 @@ func Solve(input string) {
 	var startingPoint *Point
 	tiles := &TileMap{}
 
+	height := len(rows)
+	width := len(rows[0])
+
 	for y, row := range rows {
 		for x, c := range row {
 			(*tiles)[key(x, y)] = &Point{
@@ -50,6 +55,37 @@ func Solve(input string) {
 
 	startingPoint.value = getStartingShape(tiles, startingPoint.x, startingPoint.y)
 	fmt.Println("Part1: ", loopNeighbors(startingPoint, tiles, startingPoint, startingPoint, 0)/2)
+
+	inside := 0
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			point := (*tiles)[key(x, y)]
+			if !point.polygonEdge {
+				edges := 0
+				started := '.'
+				for xC := 0; xC < x; xC++ {
+					tile := (*tiles)[key(xC, y)]
+					if tile.polygonEdge {
+						if tile.value == '|' || tile.value == 'L' || tile.value == 'F' {
+							started = tile.value
+							edges++
+						} else if tile.value == 'J' || tile.value == '7' {
+							if !(started == 'F' && tile.value == 'J' || started == 'L' && tile.value == '7') {
+								edges++
+							}
+							started = '.'
+						}
+					}
+				}
+				if edges%2 == 1 {
+					inside++
+					point.inside = true
+					fmt.Println("Point: ", *point)
+				}
+			}
+		}
+	}
+	fmt.Println("Part2: ", inside)
 }
 
 func loopNeighbors(start *Point, tiles *TileMap, cp *Point, pp *Point, length int) int {
@@ -61,6 +97,9 @@ func loopNeighbors(start *Point, tiles *TileMap, cp *Point, pp *Point, length in
 	for _, n := range neighbors {
 		if n.x != diffX || n.y != diffY {
 			fmt.Print(string(cp.value))
+			// && cp.value != '7' && cp.value != 'J'
+			//cp.polygonEdge = cp.value != '-' //for part 2, we are checking horizontal edges, we dont want dash because its not an edge
+			cp.polygonEdge = true //for part 2, we are checking horizontal edges, we dont want dash because its not an edge
 			return loopNeighbors(start, tiles, (*tiles)[key(cp.x+n.x, cp.y+n.y)], cp, length+1)
 		}
 	}

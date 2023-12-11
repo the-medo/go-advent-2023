@@ -80,7 +80,6 @@ func Solve(input string) {
 				if edges%2 == 1 {
 					inside++
 					point.inside = true
-					fmt.Println("Point: ", *point)
 				}
 			}
 		}
@@ -96,14 +95,12 @@ func loopNeighbors(start *Point, tiles *TileMap, cp *Point, pp *Point, length in
 	neighbors := NeighborMap[cp.value]
 	for _, n := range neighbors {
 		if n.x != diffX || n.y != diffY {
-			fmt.Print(string(cp.value))
 			// && cp.value != '7' && cp.value != 'J'
 			//cp.polygonEdge = cp.value != '-' //for part 2, we are checking horizontal edges, we dont want dash because its not an edge
 			cp.polygonEdge = true //for part 2, we are checking horizontal edges, we dont want dash because its not an edge
 			return loopNeighbors(start, tiles, (*tiles)[key(cp.x+n.x, cp.y+n.y)], cp, length+1)
 		}
 	}
-	fmt.Println(" = Did not find correct neighbor...", *cp, string(cp.value))
 	return length
 }
 

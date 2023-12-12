@@ -12,16 +12,17 @@ type Template struct {
 	length      int
 }
 
-type Combo struct {
-	combinations []string
-	count        int
+type Key struct {
+	posInTemplate, rangeCount, currentRangeLength int
 }
-type Combos map[string]Combo
+
+type CountMap = map[Key]int
 
 func Solve(input string) {
 	rows := utils.SplitRows(input)
 	templates := make([]*Template, len(rows))
 	comboSum := 0
+
 	for i, row := range rows {
 		rowSplit := strings.Split(row, " ")
 		templates[i] = &Template{
@@ -29,126 +30,69 @@ func Solve(input string) {
 			arrangement: utils.StringsToInts(strings.Split(rowSplit[1], ",")),
 			length:      len(rowSplit[0]),
 		}
-		//fmt.Println("Template: ", templates[i])
-		combinations := createCombinations(templates[i].length, templates[i].arrangement, templates[i].template)
-		comboSum += len(combinations)
-		//fmt.Println("Combinations", combinations, len(combinations))
+		mp := make(CountMap)
+		value := compute(&Key{0, 0, 0}, templates[i].arrangement, templates[i].template, &mp, '.')
+		fmt.Println("Template: ", templates[i], value, mp)
+
+		comboSum += value
 	}
 
 	fmt.Println("Part 1:", comboSum)
 }
 
-func createCombinations(length int, arrangement []int, template string) map[string]string {
-	arrLen := len(arrangement)
-	minLength := arrLen - 1
-	movedBy := make([]int, arrLen)
-	semiResult := make(map[string]string)
-	result := make(map[string]string)
-
-	for i, n := range arrangement {
-		minLength += n
-		movedBy[i] = 0
+func compute(key *Key, amounts []int, template string, cMap *CountMap, lastChar rune) int {
+	val, exists := (*cMap)[*key]
+	if exists {
+		return val
 	}
 
-	if minLength > length {
-		//fmt.Println("minLength > length", arrangement)
-		panic("!")
-	}
-	lastStart := length - minLength
-	totalFree := lastStart + 1
-
-	res := make([][]int, 5)
-	allRes := make([][]int, 5)
-	//final := make([]int, 0)
-	//fmt.Println("res ", res)
-	for i, _ := range arrangement {
-		for _, arr := range allRes {
-			res = createArr(totalFree, arr)
-			resLen := len(res[0])
-
-			for _, arr := range res {
-				if len(arr) == resLen {
-					allRes = append(allRes, arr)
+	if key.posInTemplate == len(template) {
+		if key.rangeCount == len(amounts) {
+			if key.currentRangeLength > 0 {
+				if amounts[key.rangeCount-1] == key.currentRangeLength {
+					return 1
 				}
+				return 0
 			}
-			//fmt.Println("=> res ", res, totalFree)
+			return 1
 		}
-
-		if i == arrLen-1 {
-			for _, arr := range allRes {
-				if isValid(arr, totalFree, arrLen) {
-					key := utils.JoinIntsToString(arr, "-")
-					semiResult[key] = createString(length, arrangement, arr)
-					if compareStringWithTemplate(semiResult[key], template) {
-						result[key] = semiResult[key]
-					}
-				}
-			}
-		}
+		return 0
 	}
 
-	//fmt.Println("Positions: 0 - ", lastStart)
-	return result
-}
-
-func createArr(max int, arr []int) [][]int {
-	res := make([][]int, max)
-	for i := 0; i < max; i++ {
-		newArr := make([]int, len(arr))
-		copy(newArr, arr)
-		res[i] = append(newArr, i)
-	}
-	return res
-}
-
-func compareStringWithTemplate(s string, t string) bool {
-	for i, _ := range s {
-		if (t[i] == '.' || t[i] == '#') && t[i] != s[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func isValid(arr []int, totalFree int, arrLen int) bool {
-	if len(arr) < arrLen {
-		return false
-	}
-	//fmt.Print("IS valid", arr)
 	sum := 0
-	for i := len(arr) - 1; i >= 0; i-- {
-		sum += arr[i]
-		if sum >= totalFree {
-			//fmt.Println("FALSE")
-			return false
-		}
-	}
-	//fmt.Println("TRUE")
-	return true
-}
+	char := template[key.posInTemplate]
+	newPosInTemplate := key.posInTemplate + 1
 
-func createString(length int, arrangement []int, movedBy []int) string {
-	//fmt.Print("CREATE STRING", length, arrangement, movedBy)
-	result := make([]rune, length)
-	i := 0
-	for n, _ := range arrangement {
-		for j := 0; j < movedBy[n]; j++ {
-			result[i] = '.'
-			i++
-		}
-		for j := 0; j < arrangement[n]; j++ {
-			result[i] = '#'
-			i++
-		}
-		if n != len(arrangement)-1 {
-			result[i] = '.'
-			i++
-		}
+	if (char == '.' || char == '?') && key.currentRangeLength == 0 {
+		sum += compute(&Key{
+			posInTemplate:      newPosInTemplate,
+			rangeCount:         key.rangeCount,
+			currentRangeLength: 0,
+		}, amounts, template, cMap, '.')
+
+	} else if (char == '.' || char == '?') && key.currentRangeLength > 0 && key.rangeCount <= len(amounts) && amounts[key.rangeCount-1] == key.currentRangeLength {
+		sum += compute(&Key{
+			posInTemplate:      newPosInTemplate,
+			rangeCount:         key.rangeCount,
+			currentRangeLength: 0,
+		}, amounts, template, cMap, '.')
 	}
-	for i < length {
-		result[i] = '.'
-		i++
+
+	if char == '#' || char == '?' {
+		newCurrentRangeLength := key.currentRangeLength + 1
+		newRangeCount := key.rangeCount
+		if lastChar == '.' {
+			newRangeCount++
+		}
+
+		sum += compute(&Key{
+			posInTemplate:      newPosInTemplate,
+			rangeCount:         newRangeCount,
+			currentRangeLength: newCurrentRangeLength,
+		}, amounts, template, cMap, '#')
 	}
-	//fmt.Println(string(result))
-	return string(result)
+
+	(*cMap)[*key] = sum
+
+	return sum
 }

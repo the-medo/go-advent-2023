@@ -25,16 +25,15 @@ func Solve(input string) {
 	rockMap2 := copyRockMap(rockMap)
 	tiltMap(&rockMap, 0, -1)
 	//printMap(&rockMap)
-	fmt.Println("Part 1: ", countMap(&rockMap))
+	fmt.Println("Part 1: ", computeTotalLoad(&rockMap))
 
 	//printMap(&rockMap2)
-	fmt.Println("Part 2: ", checkCycleMap(cycleMap(&rockMap2, 1000)))
+	fmt.Println("Part 2: ", checkCycleMap(cycleMap(&rockMap2, 300)))
 
 }
 
 func checkCycleMap(cyclePoints []int) int {
 	intMap := make(map[int][]int)
-	cycleSize := 0
 	for i := 0; i < len(cyclePoints); i++ {
 		value := cyclePoints[i]
 		_, exists := intMap[value]
@@ -42,20 +41,14 @@ func checkCycleMap(cyclePoints []int) int {
 			intMap[value] = make([]int, 0, len(cyclePoints))
 		}
 		intMap[value] = append(intMap[value], i)
-		intMapValueSize := len(intMap[value])
-		if intMapValueSize > cycleSize {
-			cycleSize = intMapValueSize
-		}
 	}
 
-	multiposValues := make([]int, 0)
 	posDiffCounter := make(map[int]int)
 	posDiffFirst := make(map[int]int)
-	cycleStart := 0
-	highestDiffCount := 0
-	diffWithHighestCount := 0
+	diffWithHighestCount := 0 //for example, 17 is the most-common difference between two positions of the value
+	highestDiffCount := 0     //for example, diff 17 has 200 occurrences
 
-	for v, positions := range intMap {
+	for _, positions := range intMap {
 		if len(positions) > 1 {
 			for i := 0; i < len(positions)-2; i++ {
 				diff := positions[i+1] - positions[i]
@@ -74,37 +67,13 @@ func checkCycleMap(cyclePoints []int) int {
 					}
 				}
 			}
-			multiposValues = append(multiposValues, v)
 		}
 	}
 
-	cycleStart = posDiffFirst[diffWithHighestCount]
+	cycleStart := posDiffFirst[diffWithHighestCount]
 
 	result := cyclePoints[cycleStart+(1000000000-cycleStart)%diffWithHighestCount-1]
 	return result
-}
-
-func countMap(rockMap *RockMap) int {
-	totalHeight := len(*rockMap)
-	result := 0
-	for y, row := range *rockMap {
-		for _, c := range row {
-			if c == ROUND {
-				result += totalHeight - y
-			}
-		}
-	}
-	return result
-}
-
-func printMap(rockMap *RockMap) {
-	for _, row := range *rockMap {
-		for _, c := range row {
-			fmt.Print(string(c))
-		}
-		fmt.Println()
-	}
-	fmt.Println("=======================")
 }
 
 func cycleMap(rockMap *RockMap, count int) []int {
@@ -114,7 +83,7 @@ func cycleMap(rockMap *RockMap, count int) []int {
 		tiltMap(rockMap, -1, 0)
 		tiltMap(rockMap, 0, 1)
 		tiltMap(rockMap, 1, 0)
-		result[i] = countMap(rockMap)
+		result[i] = computeTotalLoad(rockMap)
 	}
 	return result
 }
@@ -135,16 +104,13 @@ func tiltMap(rockMap *RockMap, tiltX, tiltY int) {
 	}
 
 	for x := startX; cond(x, endX, incX); x += incX {
-		//fmt.Print(x, "X; ")
 		for y := startY; cond(y, endY, incY); y += incY {
-			//fmt.Print(x, ",", y, "; ")
 			c := (*rockMap)[y][x]
 			if c == ROUND {
-				moveRock(rockMap, x, y, tiltX, tiltY)
+				moveSingleRock(rockMap, x, y, tiltX, tiltY)
 			}
 		}
 	}
-	//fmt.Println()
 }
 
 func cond(num, end, inc int) bool {
@@ -154,7 +120,7 @@ func cond(num, end, inc int) bool {
 	return num >= end
 }
 
-func moveRock(rockMap *RockMap, x, y int, incX, incY int) {
+func moveSingleRock(rockMap *RockMap, x, y int, incX, incY int) {
 	width := len((*rockMap)[0])
 	height := len(*rockMap)
 	if incY == -1 && y > 0 {
@@ -191,4 +157,27 @@ func copyRockMap(rockMap RockMap) RockMap {
 		copy(rockMapCopy[i], row)
 	}
 	return rockMapCopy
+}
+
+func computeTotalLoad(rockMap *RockMap) int {
+	totalHeight := len(*rockMap)
+	result := 0
+	for y, row := range *rockMap {
+		for _, c := range row {
+			if c == ROUND {
+				result += totalHeight - y
+			}
+		}
+	}
+	return result
+}
+
+func printMap(rockMap *RockMap) {
+	for _, row := range *rockMap {
+		for _, c := range row {
+			fmt.Print(string(c))
+		}
+		fmt.Println()
+	}
+	fmt.Println("=======================")
 }

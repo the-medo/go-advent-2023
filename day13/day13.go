@@ -11,7 +11,7 @@ func Solve(input string) {
 	total1 := 0
 	total2 := 0
 
-	for i, mp := range maps {
+	for _, mp := range maps {
 		mapRows := utils.SplitRows(mp)
 		mapCols := make([]string, len(mapRows[0]))
 		for _, mr := range mapRows {
@@ -20,24 +20,16 @@ func Solve(input string) {
 			}
 		}
 
-		fmt.Println("Map ", i)
-		fmt.Println("Rows ", mapRows)
-		fmt.Println("Cols ", mapCols)
-
 		rowPoints1 := compare(mapRows, 100, 0)
 		colPoints1 := compare(mapCols, 1, 0)
 
 		rowPoints2 := compare(mapRows, 100, 1)
 		colPoints2 := compare(mapCols, 1, 1)
-		fmt.Println("Result rows", rowPoints1)
-		fmt.Println("Result cols", colPoints1)
-		fmt.Println("=============")
 		total1 += colPoints1 + rowPoints1
 		total2 += colPoints2 + rowPoints2
 	}
 	fmt.Println("Part 1 ", total1)
 	fmt.Println("Part 2 ", total2)
-	fmt.Println("Test ", compareDiffs("#.#.###", "#######"))
 }
 
 func compare(arr []string, multiplier int, smudges int) int {
@@ -52,24 +44,15 @@ func compare(arr []string, multiplier int, smudges int) int {
 }
 
 func findFromOneSide(arr []string, increment int, smudges int) int {
-	maxSmudges := smudges * 2
-	result := 0
-	start := 0
-	end := len(arr) - 1
+	maxSmudges, result, start, end := smudges*2, 0, 0, len(arr)-1
 	if increment == -1 {
-		start = len(arr) - 1
-		end = 0
+		start, end = len(arr)-1, 0
 	}
 
-	fmt.Println("STARTING! ", increment, smudges, "j, end", start, end)
 	for j := start; cond(j, end, increment); j += increment {
-		totalSmudges := 0
-		k := end
-
-		found := true
-		totalSmudges += compareDiffs(arr[j], arr[k])
-		fmt.Println("IF ", totalSmudges)
-		if totalSmudges <= maxSmudges && j != k {
+		k, found := end, true
+		totalSmudges := compareDiffs(arr[j], arr[k])
+		if totalSmudges <= maxSmudges {
 			for diff := 1; diff <= utils.AbsInt(k-j); diff++ {
 				pos1 := j + (diff * increment)
 				pos2 := k + (-diff * increment)
@@ -84,7 +67,6 @@ func findFromOneSide(arr []string, increment int, smudges int) int {
 		}
 		if found && totalSmudges == maxSmudges {
 			result = res(j, k, increment)
-			fmt.Println("Found (part ", increment, ") ;;;", j, k, result)
 		}
 	}
 
@@ -112,6 +94,5 @@ func compareDiffs(s1, s2 string) int {
 			diffChars++
 		}
 	}
-	fmt.Println("Comparing: ", s1, s2, diffChars)
 	return diffChars
 }

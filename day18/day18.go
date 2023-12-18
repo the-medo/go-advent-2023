@@ -3,7 +3,6 @@ package day18
 import (
 	"fmt"
 	"github.com/the-medo/go-advent-2023/utils"
-	"math"
 	"strconv"
 	"strings"
 )
@@ -20,7 +19,6 @@ const (
 
 type Point struct {
 	x, y int
-	//color string
 }
 
 type ColRow struct {
@@ -29,200 +27,62 @@ type ColRow struct {
 	points          map[*Point]bool
 }
 
-//
-//type Point struct {
-//	x, y int
-//}
-
 func Solve(input string) {
 	inputRows := utils.SplitRows(input)
 
-	trenchRows := make(map[int]*ColRow, 0)
-	trenchCols := make(map[int]*ColRow, 0)
+	points1 := [][]int{}
+	points2 := [][]int{}
 
 	x, y := 0, 0
-	highestY, highestX, lowestY, lowestX := -math.MaxInt, -math.MaxInt, math.MaxInt, math.MaxInt
-	//pointsToCheck := make([]*Point, 0)
+	x2, y2 := 0, 0
 
 	for _, row := range inputRows {
 		splitRow := strings.Split(row, " ")
 		dir := splitRow[0][0]
 		value, _ := strconv.Atoi(splitRow[1])
+		dir2 := splitRow[2][len(splitRow[2])-2]
+		value2, _ := strconv.ParseUint(splitRow[2][2:len(splitRow[2])-2], 16, 32)
 
-		endX, incX := x, 0
-		endY, incY := y, 0
 		if dir == DirLeft {
-			endX, incX = x-value, -1
+			x -= value
 		} else if dir == DirRight {
-			endX, incX = x+value, 1
+			x += value
 		} else if dir == DirUp {
-			endY, incY = y-value, -1
+			y -= value
 		} else if dir == DirDown {
-			endY, incY = y+value, 1
+			y += value
 		}
 
-		for x, y = x, y; x != endX || y != endY; x, y = x+incX, y+incY {
-
-			point := &Point{
-				x: x,
-				y: y,
-				//color: splitRow[2],
-			}
-
-			trenchRow, existRow := trenchRows[y]
-			trenchCol, existCol := trenchCols[x]
-
-			if !existRow {
-				trenchRows[y] = &ColRow{
-					pos:     y,
-					highest: x,
-					lowest:  x,
-					points:  make(map[*Point]bool),
-				}
-				trenchRows[y].points[point] = true
-			} else {
-				if trenchRow.highest < x {
-					trenchRow.highest = x
-				}
-				if trenchRow.lowest > x {
-					trenchRow.lowest = x
-				}
-				trenchRow.points[point] = true
-			}
-
-			if !existCol {
-				trenchCols[x] = &ColRow{
-					pos:     x,
-					highest: y,
-					lowest:  y, points: make(map[*Point]bool),
-				}
-			} else {
-				if trenchCol.highest < y {
-					trenchCol.highest = y
-				}
-				if trenchCol.lowest > y {
-					trenchCol.lowest = y
-				}
-				trenchCol.points[point] = true
-			}
-
-			if x > highestX {
-				highestX = x
-			}
-			if x < lowestX {
-				lowestX = x
-			}
-			if y > highestY {
-				highestY = y
-			}
-			if y < lowestY {
-				lowestY = y
-			}
+		if dir2 == '0' { //right
+			x2 += int(value2)
+		} else if dir2 == '1' { // down
+			y2 += int(value2)
+		} else if dir2 == '2' { // left
+			x2 -= int(value2)
+		} else if dir2 == '3' { // up
+			y2 -= int(value2)
 		}
+
+		points1 = append(points1, []int{x, y})
+		points2 = append(points2, []int{x2, y2})
+
 	}
 
-	totalOutside := 0
+	fmt.Println("Part1: ", calculateArea(points1))
+	fmt.Println("Part2: ", calculateArea(points2))
+}
 
-	fullMap := make([][]int, highestY-lowestY+1+2)
+func calculateArea(points [][]int) int {
+	area := 0
+	perimeter := 0
+	n := len(points)
 
-	for _, row := range trenchRows {
-		y = row.pos - lowestY + 1
-		fullMap[y] = make([]int, highestX-lowestX+1+2)
-		for k, _ := range row.points {
-			fullMap[y][k.x-lowestX+1] = 1
-		}
+	for i := 0; i < n; i++ {
+		j := (i + 1) % n
+		area += points[i][0] * points[j][1]
+		area -= points[j][0] * points[i][1]
+		perimeter += utils.AbsInt(points[i][0]-points[j][0]) + utils.AbsInt(points[i][1]-points[j][1])
 	}
 
-	fullMap[0] = make([]int, highestX-lowestX+1+2)
-	fullMap[len(fullMap)-1] = make([]int, highestX-lowestX+1+2)
-
-	queue := []Point{{0, 0}}
-
-	fmt.Println(fullMap)
-
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-
-		//fmt.Println(cur)
-		if fullMap[cur.y][cur.x] == 0 {
-			totalOutside++
-			fullMap[cur.y][cur.x] = 2
-
-			if cur.x > 0 {
-				queue = append(queue, Point{x: cur.x - 1, y: cur.y})
-			}
-			if cur.y > 0 {
-				queue = append(queue, Point{x: cur.x, y: cur.y - 1})
-			}
-			if cur.y < len(fullMap)-1 {
-				queue = append(queue, Point{x: cur.x, y: cur.y + 1})
-			}
-			if cur.x < len(fullMap[0])-1 {
-				queue = append(queue, Point{x: cur.x + 1, y: cur.y})
-			}
-
-		}
-	}
-
-	fmt.Println("Outside: ", totalOutside)
-
-	fmt.Println("Total: ", (len(fullMap)*len(fullMap[0]))-totalOutside)
-
-	//for _, row := range trenchRows {
-	//	started := true
-	//	yArray := make([]int, len(row.points))
-	//
-	//	i := 0
-	//	for k, _ := range row.points {
-	//		yArray[i] = k.x
-	//		fmt.Print(k, "; ")
-	//		i++
-	//	}
-	//
-	//	sort.Ints(yArray)
-	//
-	//	//lastVal := yArray[0]
-	//	continuousLine := false
-	//	rowTotal := 0
-	//	for i := 0; i < len(yArray); i++ {
-	//		val := yArray[i]
-	//
-	//		if !started {
-	//			fmt.Print(val, "S;")
-	//			started = true
-	//			rowTotal += 1
-	//		} else {
-	//			if i == len(yArray)-1 {
-	//				rowTotal += 1
-	//			} else {
-	//				diff := yArray[i+1] - val + 1
-	//				if diff > 1 && !continuousLine {
-	//					fmt.Print(val, "D-NL; ")
-	//					i++
-	//					started = false
-	//					rowTotal += diff
-	//				} else if diff > 1 && continuousLine {
-	//					fmt.Print(val, "D-L; ")
-	//					i++
-	//					started = true
-	//					rowTotal += 0
-	//					continuousLine = false
-	//				} else if diff == 1 {
-	//					fmt.Print(val, "D=1-L; ")
-	//					continuousLine = true
-	//					rowTotal += 1
-	//				} else {
-	//					fmt.Print(val, "OOOPS; ")
-	//				}
-	//			}
-	//		}
-	//	}
-	//	total += rowTotal
-	//
-	//	fmt.Println(" => ", rowTotal)
-	//}
-
-	//fmt.Println("Trench rows: ", trenchRows)
-	//fmt.Println("Part 0.5: ", total)
+	return utils.AbsInt(area/2) + (perimeter / 2) + 1
 }

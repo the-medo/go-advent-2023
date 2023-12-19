@@ -8,24 +8,11 @@ import (
 )
 
 const (
-	DirUp      = 'U'
-	DirDown    = 'D'
-	DirRight   = 'R'
-	DirLeft    = 'L'
-	Horizontal = 1
-	Vertical   = 2
-	Both       = 3
+	DirUp    = 'U'
+	DirDown  = 'D'
+	DirRight = 'R'
+	DirLeft  = 'L'
 )
-
-type Point struct {
-	x, y int
-}
-
-type ColRow struct {
-	pos             int
-	lowest, highest int
-	points          map[*Point]bool
-}
 
 func Solve(input string) {
 	inputRows := utils.SplitRows(input)

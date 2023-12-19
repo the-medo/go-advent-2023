@@ -24,19 +24,19 @@ func Solve(input string) {
 	height := len(rows)
 	width := len(rows[0])
 
-	layout := make([][]Point, height)
+	layout := make([][]*Point, height)
 	for y, row := range rows {
-		layout[y] = make([]Point, width)
+		layout[y] = make([]*Point, width)
 		for x, c := range row {
-			layout[y][x] = Point{value: int(c - 48)}
+			layout[y][x] = &Point{value: int(c - 48)}
 		}
 	}
 
-	runPart(1, layout, width, height)
-	runPart(2, layout, width, height)
+	runPart(1, &layout, width, height)
+	runPart(2, &layout, width, height)
 }
 
-func runPart(part int, layout [][]Point, width int, height int) {
+func runPart(part int, layout *[][]*Point, width int, height int) {
 	resetLayout(layout)
 	minLength, maxLength := 1, 3
 	if part == 2 {
@@ -49,7 +49,7 @@ func runPart(part int, layout [][]Point, width int, height int) {
 	for len(queue) > 0 {
 		task := queue[0]
 		queue = queue[1:]
-		newTasks := ProcessTask(&layout, task.x, task.y, task.incX, task.incY, task.value, width, height, minLength, maxLength)
+		newTasks := ProcessTask(layout, task.x, task.y, task.incX, task.incY, task.value, width, height, minLength, maxLength)
 		queue = append(queue, newTasks...)
 		counter++
 		if counter%10000 == 0 {
@@ -58,7 +58,7 @@ func runPart(part int, layout [][]Point, width int, height int) {
 	}
 
 	minHeatLoss := math.MaxInt
-	for _, value := range layout[height-1][width-1].lowestValue {
+	for _, value := range (*layout)[height-1][width-1].lowestValue {
 		if value < minHeatLoss {
 			minHeatLoss = value
 		}
@@ -67,19 +67,16 @@ func runPart(part int, layout [][]Point, width int, height int) {
 	fmt.Println("Part ", part, ": [min: ", minLength, " max: ", maxLength, "] ", minHeatLoss)
 }
 
-func ProcessTask(m *[][]Point, x, y, incX, incY, value int, width, height int, minLength, maxLength int) []QueueTask {
+func ProcessTask(m *[][]*Point, x, y, incX, incY, value int, width, height int, minLength, maxLength int) []QueueTask {
 	newTasks := make([]QueueTask, 0)
 	cacheKey := getCacheKey(incX, incY)
 	_, exists := (*m)[y][x].lowestValue[cacheKey]
 
-	if exists {
-		if (*m)[y][x].lowestValue[cacheKey] <= value {
-			return newTasks
-		}
-		(*m)[y][x].lowestValue[cacheKey] = value
-	} else if !exists {
-		(*m)[y][x].lowestValue[cacheKey] = value
+	if exists && (*m)[y][x].lowestValue[cacheKey] <= value {
+		return newTasks
 	}
+
+	(*m)[y][x].lowestValue[cacheKey] = value
 
 	if x == width-1 && y == height-1 {
 		return newTasks
@@ -155,10 +152,10 @@ func rotateRight(incX, incY int) (int, int) {
 	}
 }
 
-func resetLayout(l [][]Point) {
-	for y, _ := range l {
-		for x, _ := range (l)[y] {
-			l[y][x].lowestValue = make(LowestValue)
+func resetLayout(l *[][]*Point) {
+	for y, _ := range *l {
+		for x, _ := range (*l)[y] {
+			(*l)[y][x].lowestValue = make(LowestValue)
 		}
 	}
 }

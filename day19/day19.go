@@ -23,7 +23,9 @@ type Condition struct {
 }
 
 type Rule struct {
-	conds []*Condition
+	conds       []*Condition
+	value       int
+	valueFilled bool
 }
 
 type Part struct {
@@ -32,6 +34,12 @@ type Part struct {
 }
 
 type RuleMap = map[string]*Rule
+
+type RatingRange struct {
+	s, e int
+}
+
+type FieldMap = map[string]RatingRange
 
 func Solve(input string) {
 	splitInput := utils.SplitByEmptyRow(input)
@@ -105,21 +113,101 @@ func Solve(input string) {
 		processPart(p, &rules)
 
 		if p.status == 'A' {
-			fmt.Println("Success: ", p.x, p.m, p.a, p.s, p.x+p.m+p.a+p.s)
 			total += p.x + p.m + p.a + p.s
 		}
 	}
 
 	fmt.Println("Part 1: ", total)
 
+	fields := FieldMap{
+		"x": {1, 4000},
+		"m": {1, 4000},
+		"a": {1, 4000},
+		"s": {1, 4000},
+	}
+
+	fmt.Println("Part 2: ", getRuleValue(rules["in"], &rules, fields))
+}
+
+func getRuleValue(r *Rule, rm *RuleMap, fields FieldMap) int {
+	total := 0
+
+	for _, c := range r.conds {
+		inRule, outRule := processConditionRatingRange(c, fields)
+		if c.goToRule == "A" {
+			total += multiplyFields(inRule)
+			fmt.Println("=============== INCREASING RESULT: ", multiplyFields(inRule))
+		} else if c.goToRule == "R" {
+			total += 0
+		} else {
+			fmt.Println("Going to rule: ", c.goToRule)
+			total += getRuleValue((*rm)[c.goToRule], rm, inRule)
+		}
+		fields = outRule
+	}
+
+	return total
+}
+
+func processConditionRatingRange(c *Condition, fieldMap FieldMap) (FieldMap, FieldMap) {
+	inCondition := FieldMap{}
+	outsideCondition := FieldMap{}
+
+	for k, f := range fieldMap {
+		if c.field == k {
+			if c.operation == OLower {
+				if f.e < c.oValue {
+					inCondition[k] = RatingRange{f.s, f.e}
+					outsideCondition[k] = RatingRange{0, -1}
+				} else if f.s < c.oValue {
+					inCondition[k] = RatingRange{f.s, c.oValue - 1}
+					outsideCondition[k] = RatingRange{c.oValue, f.e}
+				} else {
+					inCondition[k] = RatingRange{0, -1}
+					outsideCondition[k] = RatingRange{f.s, f.e}
+				}
+			} else if c.operation == OBigger {
+				if f.s > c.oValue {
+					inCondition[k] = RatingRange{f.s, f.e}
+					outsideCondition[k] = RatingRange{0, -1}
+				} else if f.e > c.oValue {
+					inCondition[k] = RatingRange{c.oValue + 1, f.e}
+					outsideCondition[k] = RatingRange{f.s, c.oValue}
+				} else {
+					inCondition[k] = RatingRange{0, -1}
+					outsideCondition[k] = RatingRange{f.s, f.e}
+				}
+			} else if c.operation == OFinal {
+				inCondition[k] = RatingRange{f.s, f.e}
+				outsideCondition[k] = RatingRange{0, -1}
+			}
+		} else {
+			inCondition[k] = RatingRange{f.s, f.e}
+			outsideCondition[k] = RatingRange{f.s, f.e}
+		}
+	}
+
+	fmt.Println("Processed condition: ", c)
+	fmt.Println(" == Incoming field map: ", fieldMap)
+	fmt.Println(" ==== In Condition:     ", inCondition)
+	fmt.Println(" ==== Out Condition:    ", outsideCondition)
+
+	return inCondition, outsideCondition
+}
+
+func multiplyFields(f FieldMap) int {
+	total := 1
+	for _, fv := range f {
+		val := fv.e - fv.s + 1
+		total *= val
+	}
+	return total
 }
 
 func processPart(p *Part, rules *RuleMap) {
-	fmt.Println("processPart")
 	currentRule := "in"
 
 	for currentRule != "R" && currentRule != "A" {
-		fmt.Println("CURRENT RULE: ", currentRule)
 		rule := (*rules)[currentRule]
 		currentRule = processRule(p, rule)
 	}
@@ -134,7 +222,6 @@ func processPart(p *Part, rules *RuleMap) {
 }
 
 func processRule(p *Part, r *Rule) string {
-	fmt.Println("processRule", p, r)
 	for _, c := range r.conds {
 		validCondition := processCondition(p, c)
 		if validCondition {
@@ -145,7 +232,6 @@ func processRule(p *Part, r *Rule) string {
 }
 
 func processCondition(p *Part, c *Condition) bool {
-	fmt.Println("processCondition")
 	if c.operation == OFinal {
 		return true
 	}
@@ -166,7 +252,6 @@ func processCondition(p *Part, c *Condition) bool {
 }
 
 func getFieldValue(p *Part, field string) int {
-	fmt.Println("getFieldValue")
 	if field == "x" {
 		return p.x
 	} else if field == "m" {

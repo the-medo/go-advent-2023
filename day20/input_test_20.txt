@@ -1,5 +1,14 @@
-broadcaster -> a
-%a -> inv, con
-&inv -> b
-%b -> con
-&con -> output
+broadcaster -> sj
+%sj -> kj, rb
+%kj -> fk
+&rb -> vc, zs, fk, hq, rt, sj, kj
+%fk -> xh
+%xh -> zs, rb
+%zs -> ct
+%ct -> rt, rb
+%rt -> hq
+%hq -> bb
+%bb -> kf, rb
+%kf -> rb, ph
+%ph -> rb, hx
+%hx -> rb

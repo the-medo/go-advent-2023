@@ -11,8 +11,9 @@ type ModuleType rune
 const (
 	MBroadcaster ModuleType = 'b'
 	MFlipFlop    ModuleType = '%'
-	MConjuction  ModuleType = '&'
+	MConjunction ModuleType = '&'
 	MNoType      ModuleType = ' '
+	part1Counter int        = 1000
 )
 
 type Module struct {
@@ -21,6 +22,7 @@ type Module struct {
 	on           bool
 	received     map[string]bool
 	destinations []*Module
+	lowestOff    int
 }
 
 type Task struct {
@@ -54,6 +56,7 @@ func Solve(input string) {
 			t:            ModuleType(moduleType),
 			received:     make(map[string]bool),
 			destinations: make([]*Module, len(destinationNames[moduleName])),
+			lowestOff:    0,
 		}
 	}
 
@@ -80,6 +83,8 @@ func Solve(input string) {
 	highPulses := 0
 	counter := 1
 
+	part2Modules := []string{"rb", "ml", "gp", "bt"}
+
 	for counter >= 1 {
 		queue := []Task{{"button", "broadcaster", false}}
 		lowPulses++
@@ -91,23 +96,24 @@ func Solve(input string) {
 			queue = append(queue, newTasks...)
 		}
 
-		lowRxCount := 0
-		for _, j := range modules["rx"].received {
-			if !j {
-				lowRxCount++
-			}
-		}
-		//fmt.Println("Part 2: ", counter+1, lowRxCount)
-		if lowRxCount == 1 {
-			fmt.Println("Part 2: ", counter)
-			break
-		}
-
-		if counter == 1000 {
+		if counter == part1Counter {
 			//fmt.Println("After ", counter, " => Low: ", lowPulses, "; High: ", highPulses)
 			fmt.Println("Part 1: ", lowPulses, highPulses, lowPulses*highPulses)
 		}
 		counter++
+
+		lowestOffMissing := 1
+		for _, s := range part2Modules {
+			m, e := modules[s]
+			if e {
+				lowestOffMissing *= m.lowestOff
+			}
+		}
+
+		if lowestOffMissing > 0 && counter >= part1Counter {
+			fmt.Println("Part 2: ", lowestOffMissing)
+			break
+		}
 	}
 
 }
@@ -121,7 +127,7 @@ func ProcessTask(modules *ModuleMap, sender string, receiver string, pulse bool,
 	rec.received[sender] = pulse
 	result := false
 
-	if rec.t == MConjuction {
+	if rec.t == MConjunction {
 		allHigh := true
 		for _, j := range rec.received {
 			if j == false {
@@ -150,6 +156,10 @@ func ProcessTask(modules *ModuleMap, sender string, receiver string, pulse bool,
 		*highPulses += len(rec.destinations)
 	} else {
 		*lowPulses += len(rec.destinations)
+	}
+
+	if !result && rec.lowestOff == 0 {
+		rec.lowestOff = counter
 	}
 
 	return newTasks

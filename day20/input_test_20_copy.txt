@@ -1,0 +1,6 @@
+broadcaster -> sj
+%sj -> kj, rb
+%kj -> fk
+&rb -> vc, fk, sj, kj
+%fk -> xh
+%xh -> rb

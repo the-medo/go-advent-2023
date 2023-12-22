@@ -9,42 +9,37 @@ import (
 	"strings"
 )
 
-type Direction rune
-
-const (
-	dirX Direction = 'x'
-	dirY Direction = 'y'
-	dirZ Direction = 'z'
-)
-
 type Point struct {
 	x, y, z int
 }
 
 type Brick struct {
-	p1, p2      Point
-	dir         Direction
-	id          int
-	supportedBy []*Brick
-	supports    []*Brick
+	p1, p2             Point
+	id                 int
+	supportedBy        []*Brick
+	supports           []*Brick
+	totalFalls         int
+	canBeDisintegrated bool
 }
 
 func Solve(input string) {
 	rows := utils.SplitRows(input)
 
+	// Parse bricks, sort their points right away
 	bricks := make([]*Brick, len(rows))
 	for i, row := range rows {
 		splitByTilde := strings.Split(row, "~")
 		p1, p2 := sortPoints(ParsePoint(splitByTilde[0]), ParsePoint(splitByTilde[1]))
-		dir := p1.getDir(p2)
-		bricks[i] = &Brick{*p1, *p2, dir, i, make([]*Brick, 0), make([]*Brick, 0)}
+		bricks[i] = &Brick{*p1, *p2, i, make([]*Brick, 0), make([]*Brick, 0), 0, false}
 	}
 
+	//sort bricks by Z and  X (Z is important, X is not)
 	sort.Slice(bricks, func(i, j int) bool {
 		return sortBricksByZXY(bricks[i], bricks[j]) > 0
 	})
 
-	for i, _ := range bricks {
+	//let the bricks fall and find their supporting bricks
+	for i := range bricks {
 		lowestPossibleZ := 1
 		supportingBricks := make([]*Brick, 0)
 		for j := 0; j < i; j++ {
@@ -69,6 +64,7 @@ func Solve(input string) {
 		bricks[i].p1.z = lowestPossibleZ
 	}
 
+	// Part 1 - check number of bricks, that can be removed
 	canBeDisintegrated := 0
 	for i := len(bricks) - 1; i >= 0; i-- {
 		minSupportedBy := math.MaxInt
@@ -80,53 +76,96 @@ func Solve(input string) {
 		}
 		if minSupportedBy >= 2 {
 			canBeDisintegrated++
+			bricks[i].canBeDisintegrated = true
 		}
 	}
 
+	// Part 2 - total falls
+	totalFallCount := 0
 	for _, b := range bricks {
-		b.print()
+		totalFallCount += b.figureFallCount()
+
 	}
 
-	fmt.Println("======================")
-	fmt.Println("======================")
-
-	//fmt.Println(bricks[6].cross(bricks[5]))
-
 	fmt.Println("Part 1: ", canBeDisintegrated)
+	fmt.Println("Part 2: ", totalFallCount)
+}
+
+func (b *Brick) figureFallCount() int {
+	if b.canBeDisintegrated {
+		b.totalFalls = 0
+		return 0
+	}
+
+	//prepare array of bricks to check - firstly, the ones that current brick supports
+	bricksToCheck := make([]*Brick, 0)
+	for _, sup := range b.supports {
+		bricksToCheck = append(bricksToCheck, sup)
+	}
+
+	//prepare map of deleted bricks for faster lookup - actual brick is removed at the start
+	removedBricksMap := make(map[int]*Brick)
+	removedBricksMap[b.id] = b
+
+	i := 0
+	for i < len(bricksToCheck) { //while we are not at an end of bricks to check..
+		rb := bricksToCheck[i]
+
+		//check, if some of the support bricks are available
+		hasValidSupport := false
+		for _, supBrick := range rb.supportedBy {
+			_, exists := removedBricksMap[supBrick.id]
+			if !exists {
+				hasValidSupport = true
+				break
+			}
+		}
+
+		//if there is no other available support brick, this brick falls
+		//		=> add bricks that are supported by it to "bricks to check"
+		//		=> add it to removed bricks
+		if !hasValidSupport {
+			for _, sup := range rb.supports {
+				bricksToCheck = append(bricksToCheck, sup)
+			}
+			removedBricksMap[rb.id] = rb
+		}
+		i++
+	}
+
+	// decrease by one, because the brick itself doesn't count
+	b.totalFalls = len(removedBricksMap) - 1
+	return b.totalFalls
 }
 
 func (b *Brick) print() {
 	fmt.Println("======================")
-	fmt.Print("Brick: ", b.id, b.p1, b.p2)
+	fmt.Print("Brick: ", b.id, b.p1, b.p2, "FALLS: ", b.totalFalls)
 	fmt.Println()
 	fmt.Print("Supported by: ")
 	for _, x := range b.supportedBy {
-		fmt.Print(" ID: ", x.id, "pts:  ", x.p1, x.p2)
+		fmt.Print(" ID: ", x.id)
 	}
 	fmt.Println()
 
 	fmt.Print("Supports: ")
 	for _, x := range b.supports {
-		fmt.Print(" ID:", x.id, "pts:", x.p1, x.p2)
+		fmt.Print(" ID:", x.id)
 	}
 	fmt.Println()
 
 	fmt.Println()
 }
+
+// cross checks if two bricks overlap in the X and Y axes.
 func (b1 *Brick) cross(b2 *Brick) bool {
-	x1 := b1.p1.x <= b2.p1.x && b2.p1.x <= b1.p2.x
-	x2 := b1.p1.x <= b2.p2.x && b2.p2.x <= b1.p2.x
-	x3 := b2.p1.x <= b1.p1.x && b1.p1.x <= b2.p2.x
-	x4 := b2.p1.x <= b1.p2.x && b1.p2.x <= b2.p2.x
+	overlapX := b1.p1.x <= b2.p2.x && b2.p1.x <= b1.p2.x
+	overlapY := b1.p1.y <= b2.p2.y && b2.p1.y <= b1.p2.y
 
-	y1 := b1.p1.y <= b2.p1.y && b2.p1.y <= b1.p2.y
-	y2 := b1.p1.y <= b2.p2.y && b2.p2.y <= b1.p2.y
-	y3 := b2.p1.y <= b1.p1.y && b1.p1.y <= b2.p2.y
-	y4 := b2.p1.y <= b1.p2.y && b1.p2.y <= b2.p2.y
-
-	return (x1 || x2 || x3 || x4) && (y1 || y2 || y3 || y4)
+	return overlapX && overlapY
 }
 
+// Z axis is our main axis, lower should be first
 func sortBricksByZXY(b1 *Brick, b2 *Brick) int {
 	if b1.p1.z == b2.p1.z {
 		if b1.p1.x == b2.p1.x {
@@ -137,6 +176,7 @@ func sortBricksByZXY(b1 *Brick, b2 *Brick) int {
 	return b2.p1.z - b1.p1.z
 }
 
+// sort points in case they are reversed
 func sortPoints(p *Point, p2 *Point) (*Point, *Point) {
 	if p.z != p2.z {
 		if p.z > p2.z {
@@ -152,17 +192,6 @@ func sortPoints(p *Point, p2 *Point) (*Point, *Point) {
 		}
 	}
 	return p, p2
-}
-
-func (p *Point) getDir(p2 *Point) Direction {
-	if p.x != p2.x {
-		return dirX
-	} else if p.y != p2.y {
-		return dirY
-	} else if p.z != p2.z {
-		return dirZ
-	}
-	return dirX
 }
 
 func ParsePoint(s string) *Point {

@@ -44,20 +44,19 @@ func Solve(input string) {
 }
 
 func IntersectHailstorms(h1 *Hailstone, h2 *Hailstone) int {
-	t := h2.velocity.y*(h2.ps.x-h1.ps.x) - h2.velocity.x*(h2.ps.y-h1.ps.y)
-	t = t / ((h1.velocity.x * h2.velocity.y) - (h2.velocity.x * h1.velocity.y))
+	a := (h2.velocity.y*(h2.ps.x-h1.ps.x) - h2.velocity.x*(h2.ps.y-h1.ps.y)) / ((h1.velocity.x * h2.velocity.y) - (h2.velocity.x * h1.velocity.y))
 
-	if t < 0 {
-		fmt.Println("[T < 0] PAST")
+	if a < 0 {
+		fmt.Println("[A < 0] no intersection in h1's velocity")
 		return 0
 	}
 
-	x := h1.ps.x + (h1.velocity.x * t)
-	y := h1.ps.y + (h1.velocity.y * t)
+	x := h1.ps.x + (h1.velocity.x * a)
+	y := h1.ps.y + (h1.velocity.y * a)
 
-	s := (x - h2.ps.x) / h2.velocity.x
-	if s < 0 {
-		fmt.Println("[S < 0]")
+	b := (x - h2.ps.x) / h2.velocity.x
+	if b < 0 {
+		fmt.Println("[B < 0] no intersection in h2's velocity")
 		return 0
 	}
 
@@ -74,16 +73,6 @@ func IntersectHailstorms(h1 *Hailstone, h2 *Hailstone) int {
 	fmt.Printf("[%d] The lines intersect at point (%f, %f)\n", withinRange, x, y)
 
 	return withinRange
-}
-
-func (h *Hailstone) isPast(x, y float64) bool {
-	if (h.velocity.x < 0 && x >= h.ps.x) ||
-		(h.velocity.x > 0 && x <= h.ps.x) ||
-		(h.velocity.y < 0 && y >= h.ps.y) ||
-		(h.velocity.y > 0 && y <= h.ps.y) {
-		return true
-	}
-	return false
 }
 
 func ParseHailstone(s string) Hailstone {

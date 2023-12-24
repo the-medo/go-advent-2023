@@ -49,7 +49,7 @@ func Solve(input string) {
 	}
 	fmt.Println(start, end)
 
-	for i := 1; i <= 2; i++ {
+	for i := 2; i <= 2; i++ {
 		intersections := make(map[int]*Intersection)
 		intersections[1] = &Intersection{
 			id:        1,
@@ -75,7 +75,7 @@ func Solve(input string) {
 
 			counter++
 			if counter%100000 == 0 {
-				fmt.Println("i: ", counter, " queue len: ", len(queue))
+				//fmt.Println("i: ", counter, " queue len: ", len(queue))
 			}
 		}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/the-medo/go-advent-2023/utils"
 	"golang.org/x/exp/slices"
+	"math"
 	"strings"
 )
 
@@ -27,63 +28,99 @@ func Solve(input string) {
 
 	checks := make(map[string]*Check)
 
-	for k, _ := range g {
-		for _, l := range g[k] {
-			for _, m := range g[l] {
-				deleted := make(map[string]bool)
-				haveToVisit := make(map[string]bool)
-				for _, x := range g[k] {
-					haveToVisit[x] = true
-				}
-				//for _, x := range g[l] {
-				//	haveToVisit[x] = true
-				//}
-				//for _, x := range g[m] {
-				//	haveToVisit[x] = true
-				//}
-				deleted[k] = true
-				deleted[l] = true
-				deleted[m] = true
-				delete(haveToVisit, k)
-				delete(haveToVisit, l)
-				delete(haveToVisit, m)
+	checkCount := 0
 
-				if m != k {
-					checkKey := key([]string{k, l, m})
-					_, exists := checks[checkKey]
-					if !exists {
-						checks[checkKey] = &Check{
-							key:                    checkKey,
-							deleted:                deleted,
-							haveToVisit:            haveToVisit,
-							visited:                make(map[string]bool),
-							visitedFromHaveToVisit: make(map[string]bool),
+	resultCount := 0
+	count := 0
+
+	maxVisited := 0
+	minVisited := math.MaxInt
+
+	neighborLevel := 0
+
+	for maxVisited == 0 {
+		for k, _ := range g {
+			for _, l := range g[k] {
+				for _, m := range g[l] {
+					keyPool := make(map[string]bool)
+					keyPool[k] = true
+					keyPool[l] = true
+					keyPool[m] = true
+
+					for i := 0; i < neighborLevel; i++ {
+						for kpk, _ := range keyPool {
+							for _, n := range g[kpk] {
+								keyPool[n] = true
+							}
+						}
+					}
+
+					nodes := make([]string, 0)
+					for k, _ := range keyPool {
+						nodes = append(nodes, k)
+					}
+
+					for p := 0; p < len(nodes)-2; p++ {
+						for q := p + 1; q < len(nodes)-1; q++ {
+							for r := q + 1; r < len(nodes); r++ {
+
+								deleted := make(map[string]bool)
+								haveToVisit := make(map[string]bool)
+								for _, x := range g[nodes[p]] {
+									haveToVisit[x] = true
+								}
+								deleted[nodes[p]] = true
+								deleted[nodes[q]] = true
+								deleted[nodes[r]] = true
+								delete(haveToVisit, nodes[p])
+								delete(haveToVisit, nodes[q])
+								delete(haveToVisit, nodes[r])
+
+								checkKey := key([]string{nodes[p], nodes[q], nodes[r]})
+								_, exists := checks[checkKey]
+								if !exists {
+									checkCount++
+									checks[checkKey] = &Check{
+										key:                    checkKey,
+										deleted:                deleted,
+										haveToVisit:            haveToVisit,
+										visited:                make(map[string]bool),
+										visitedFromHaveToVisit: make(map[string]bool),
+									}
+
+									c := checks[checkKey]
+									c.process(g)
+									if !c.result {
+										resultCount++
+										fmt.Print("FALSE: ", c.key, count)
+										fmt.Println("  ===> ", len(c.visited))
+										if len(c.visited) > maxVisited {
+											maxVisited = len(c.visited)
+										}
+										if len(c.visited) < minVisited {
+											minVisited = len(c.visited)
+										}
+									}
+
+									if checkCount%100000 == 0 {
+										fmt.Println("Check count: ", checkCount)
+									}
+									checks[checkKey] = &Check{}
+								}
+							}
 						}
 					}
 				}
 			}
 		}
+		neighborLevel++
 	}
 
-	//fmt.Println(checks)
+	fmt.Println("Total check resultCount: ", len(checks))
+	diff := len(g) - maxVisited
+	fmt.Println("Total found node combinations: ", resultCount, " ; max visited count: ", maxVisited, " ; min visited count: ", minVisited, " diff from max visited: ", diff)
+	fmt.Println("Part 1: ", diff*maxVisited)
 
-	//key := "bvb-ntq-xhk"
-	//fmt.Println(checks[key])
-	//checks[key].process(g)
-	//
-	//fmt.Println(checks[key])
-
-	for _, c := range checks {
-		//if strings.Contains(c.key, "bvb") {
-		//	fmt.Println(c.key)
-		//}
-		c.process(g)
-		if !c.result {
-			fmt.Println(c)
-		}
-	}
-
-	fmt.Println(checks["bvb-hfx-jqt"])
 }
 
 func (c *Check) process(g Graph) {
